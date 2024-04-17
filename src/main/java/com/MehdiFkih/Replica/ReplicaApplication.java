@@ -60,7 +60,7 @@ public class ReplicaApplication {
             DeliverCallback deliverCallbackRead = (consumerTag, delivery) -> {
                 System.out.println(" [x] Read request from Read Client ");
                 String message = new String(delivery.getBody(), "UTF-8");
-                if (message.equals("Read Last")) {
+                if (message.equals("fetch")) {
                     String lastMessage = ReadFileLastLine(FileId);
                     System.out.println(lastMessage);
                     try {

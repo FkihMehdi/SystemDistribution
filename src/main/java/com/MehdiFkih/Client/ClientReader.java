@@ -6,13 +6,15 @@ import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.DeliverCallback;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Scanner;
+import java.util.*;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.LinkedBlockingDeque;
+
 
 public class ClientReader {
     private final static String EXCHANGE_NAME = "read_exchange";
     private final static String EXCHANGE_NAME_REPLICA_TO_READER = "replica_to_reader_exchange";
-
-    private static boolean received = false ;
+    private static Map<String,Integer> map = new HashMap<>();
 
 
     public static void main(String[] argv) throws Exception {
@@ -35,13 +37,11 @@ public class ClientReader {
             while (true) {
                 System.out.print("Enter un choix: \n");
                 message = scanner.nextLine();
-
                 if (message.equals("exit")) {
                     break;
                 }
 
-                if (message.equals("Read Last")) {
-
+                if (message.equals("fetch")) {
                     channel.basicPublish(EXCHANGE_NAME, "", null, message.getBytes(StandardCharsets.UTF_8));
                     System.out.println(" [x] Sent '" + message + "' request");
 
@@ -49,18 +49,39 @@ public class ClientReader {
 
                     DeliverCallback deliverCallbackWrite = (consumerTag, delivery) -> {
                         String messageReceived = new String(delivery.getBody(), StandardCharsets.UTF_8);
-                        if(!received )
-                            System.out.println(" [x] Received '" + messageReceived + "' from Write Client");
-                        received = true;
-
+                        //System.out.println(" [x] Received '" + messageReceived + "' from Replica");
+                        map.put(messageReceived, map.getOrDefault(messageReceived, 0) + 1);
                     };
                     channel.basicConsume(queueNameRead, true, deliverCallbackWrite, consumerTag -> {
                     });
-                    received = false;
-
+                }else if (message.equals("Read Last")) {
+                    printLast(map);
+                } else {
+                    System.out.println("Invalid input");
                 }
 
             }
+        }
+    }
+    private static void printLast(Map<String,Integer> map){
+        if(map.isEmpty()){
+            System.out.println("No message received");
+        }else{
+            String lastMessage = "";
+            for(Map.Entry<String,Integer> entry : map.entrySet()){
+                System.out.println("message : "+entry.getKey()+" count : "+entry.getValue());
+                if(entry.getValue()>=2)
+                {
+                    lastMessage = entry.getKey();
+                }
+            }
+            if(lastMessage.equals(""))
+            {
+                System.out.println("No message received more than once ,  so maybe two replicas are not running");
+            }else {
+                System.out.println("Last message received more than once is : " + lastMessage);
+            }
+            map.clear();
         }
     }
 }
