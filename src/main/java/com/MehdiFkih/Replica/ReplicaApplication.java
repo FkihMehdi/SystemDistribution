@@ -11,12 +11,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Scanner;
+import java.util.stream.Stream;
 
 public class ReplicaApplication {
     private final static String EXCHANGE_NAME_WRITE = "write_exchange";
     private final static String EXCHANGE_NAME_READ = "read_exchange";
     private final static String EXCHANGE_NAME_REPLICA_TO_READER = "replica_to_reader_exchange";
-    private static int counter = 0;
 
 
     public static void main(String[] args) throws Exception {
@@ -47,8 +47,7 @@ public class ReplicaApplication {
                 String message = new String(delivery.getBody(), "UTF-8");
                 System.out.println(" [x] Received '" + message + "' from Write Client");
                 try {
-                    counter++;
-                    WriteInFile(counter,FileId, message);
+                    WriteInFile(FileId, message);
                     System.out.println(" [x] Written '" + message + "' to File");
                 } catch (Exception e) {
                     throw new RuntimeException(e);
@@ -76,12 +75,14 @@ public class ReplicaApplication {
 
         }
 
-    private static void WriteInFile(int counter,String FileId,String message) throws IOException {
+    private static void WriteInFile(String FileId,String message) throws IOException {
         String filePath = "/home/mehdi/Desktop/TP3/src/main/java/com/MehdiFkih/Replica/Files/replica_" + FileId + ".txt";
         OutputStream os = null;
         try {
             os = new FileOutputStream(new File(filePath), true);
-            message = counter + " " + message;
+            Stream<String> lines = Files.lines(Paths.get(filePath));
+            int linesCount = (int) lines.count() + 1;
+            message = linesCount + " " + message;
             os.write(message.getBytes(), 0, message.length());
             os.write("\n".getBytes(), 0, "\n".length());
         } catch (IOException e) {
@@ -109,7 +110,6 @@ public class ReplicaApplication {
                     {
                         continue;
                     }
-                    System.out.println("i m here");
                     lastLine += part + " ";
                 }
 
